@@ -12,7 +12,6 @@ from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 
 
-
 class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Period.objects.all()
     serializer_class = PeriodSerializer
