@@ -3,14 +3,35 @@
 from rest_framework import viewsets, permissions, generics
 from rest_framework.exceptions import PermissionDenied
 from .models import Period, Lesson, Schedule, Mark, HomeTask
-from .serializers import (
-    PeriodSerializer, LessonSerializer, ScheduleSerializer, ScheduleCreateUpdateSerializer,
-    MarkSerializer, HomeTaskSerializer
-)
+from .serializers import *
 from .permissions import IsTeacher
 from rest_framework.filters import OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework_simplejwt.views import TokenObtainPairView
 
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+class ScheduleViewSet(viewsets.ModelViewSet):
+    queryset = Schedule.objects.all()
+    serializer_class = ScheduleSerializer
+    permission_classes = [IsTeacher]
+
+class StudentListView(generics.ListAPIView):
+    queryset = User.objects.filter(profile__role='student')
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class LessonListView(generics.ListAPIView):
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
+    permission_classes = [IsTeacher]
+
+class PeriodListView(generics.ListAPIView):
+    queryset = Period.objects.all()
+    serializer_class = PeriodSerializer
+    permission_classes = [IsTeacher]
 
 class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Period.objects.all()
@@ -25,39 +46,15 @@ class LessonViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Lesson.objects.filter(teacher=self.request.user)
 
-class ScheduleViewSet(viewsets.ModelViewSet):
-    queryset = Schedule.objects.all()
-    permission_classes = [permissions.IsAuthenticated, IsTeacher]
-
-    def get_queryset(self):
-        return Schedule.objects.filter(lesson__teacher=self.request.user)
-
-    def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
-            return ScheduleSerializer
-        return ScheduleCreateUpdateSerializer
-
-    def perform_create(self, serializer):
-        lesson = serializer.validated_data['lesson']
-        if lesson.teacher != self.request.user:
-            raise PermissionDenied("You can only create schedules for your own lessons.")
-        serializer.save()
-
 class MarkViewSet(viewsets.ModelViewSet):
     queryset = Mark.objects.all()
     serializer_class = MarkSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacher]
 
-    def get_queryset(self):
-        return Mark.objects.filter(schedule__lesson__teacher=self.request.user)
-
 class HomeTaskViewSet(viewsets.ModelViewSet):
     queryset = HomeTask.objects.all()
     serializer_class = HomeTaskSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacher]
-
-    def get_queryset(self):
-        return HomeTask.objects.filter(schedule__lesson__teacher=self.request.user)
     
 class StudentScheduleView(generics.ListAPIView):
     serializer_class = ScheduleSerializer

@@ -1,6 +1,20 @@
 from rest_framework import serializers
 from .models import Period, Lesson, Schedule, Mark, HomeTask, Profile
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework import serializers
+from django.contrib.auth.models import User
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        try:
+            token['role'] = user.profile.role
+        except Profile.DoesNotExist:
+            token['role'] = None
+
+        return token
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,11 +44,17 @@ class LessonSerializer(serializers.ModelSerializer):
 
 class ScheduleSerializer(serializers.ModelSerializer):
     lesson = LessonSerializer(read_only=True)
+    lesson_id = serializers.PrimaryKeyRelatedField(
+        queryset=Lesson.objects.all(), source='lesson', write_only=True
+    )
     period = PeriodSerializer(read_only=True)
+    period_id = serializers.PrimaryKeyRelatedField(
+        queryset=Period.objects.all(), source='period', write_only=True
+    )
 
     class Meta:
         model = Schedule
-        fields = ['id', 'lesson', 'date', 'period']
+        fields = ['id', 'lesson', 'lesson_id', 'date', 'period', 'period_id']
 
 class ScheduleCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
