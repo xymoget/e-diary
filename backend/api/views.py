@@ -38,13 +38,15 @@ class PeriodViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PeriodSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.filter(profile__role='student')
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
 class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacher]
-
-    def get_queryset(self):
-        return Lesson.objects.filter(teacher=self.request.user)
 
 class MarkViewSet(viewsets.ModelViewSet):
     queryset = Mark.objects.all()
@@ -56,16 +58,32 @@ class HomeTaskViewSet(viewsets.ModelViewSet):
     serializer_class = HomeTaskSerializer
     permission_classes = [permissions.IsAuthenticated, IsTeacher]
     
-class StudentScheduleView(generics.ListAPIView):
-    serializer_class = ScheduleSerializer
+class StudentMarksView(generics.ListAPIView):
+    serializer_class = MarkSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['date']
-    ordering_fields = ['period__number']
-    ordering = ['period__number']
+    filterset_fields = ['schedule__date', 'lesson__name']
+    ordering_fields = ['schedule__date', 'lesson__name', 'mark']
+    ordering = ['schedule__date']
 
     def get_queryset(self):
-        return Schedule.objects.all()
+        return Mark.objects.filter(student=self.request.user).select_related('lesson', 'schedule__period').order_by('schedule__date', 'lesson__name')
+    
+class StudentScheduleView(generics.ListAPIView):
+    serializer_class = StudentScheduleSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['date']
+
+    def get_queryset(self):
+        user = self.request.user
+        date = self.request.query_params.get('date', None)
+        if date:
+            return Schedule.objects.filter(mark__student=user, date=date).distinct().order_by('period__number')
+        else:
+            # If no date is provided, default to today
+            from datetime import date as dt_date
+            return Schedule.objects.filter(mark__student=user, date=dt_date.today()).distinct().order_by('period__number')
 
 class StudentMarkView(generics.ListAPIView):
     serializer_class = MarkSerializer

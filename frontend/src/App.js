@@ -36,6 +36,15 @@ function App() {
         }
       />
 
+        <Route
+        path="/student/*"
+        element={
+          <PrivateRoute role="student">
+            <StudentDashboard />
+          </PrivateRoute>
+        }
+      />
+
       {/* Catch-All Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

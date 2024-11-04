@@ -7,13 +7,15 @@ class Profile(models.Model):
         ('teacher', 'Teacher'),
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=7, choices=ROLE_CHOICES)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    date_of_birth = models.DateField(null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.role}"
+        return self.user.username
     
 class Lesson(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
@@ -45,6 +47,9 @@ class Mark(models.Model):
     )
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
     mark = models.IntegerField()
+
+    class Meta:
+        unique_together = ('schedule', 'student')
 
     def __str__(self):
         return f"{self.student.username} - {self.mark} for {self.schedule}"
